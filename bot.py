@@ -68,7 +68,7 @@ async def convert_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     os.remove(output_path)
 
 async def main():
-    app = Application.builder().token(TOKEN).build()
+    app = Application.builder().token(7467798825:AAFf4L4WFZby8P_Rz5Fj9HxJtSb5gsfluxE).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     app.add_handler(CallbackQueryHandler(convert_file))
