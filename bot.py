@@ -12,7 +12,7 @@ CHAT_ID = os.getenv("CHAT_ID") # Load chat ID from .env
 
 logging.basicConfig(level=logging.INFO)
 
-    async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Send me a .webp file, and I'll convert it for you!")
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
