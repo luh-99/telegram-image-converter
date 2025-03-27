@@ -11,17 +11,17 @@ load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")  # Load chat ID from .env
 
-# Set up logging
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 
+# Start command handler
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handles the /start command."""
     await update.message.reply_text("Send me a .webp file, and I'll convert it for you!")
 
+# Handle document uploads
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handles incoming .webp documents."""
     if update.message.chat.type in ["group", "supergroup"] and not update.message.document:
-        return
+        return  # Exit if it's not a document
 
     file = update.message.document
     if file.mime_type != "image/webp":
@@ -44,8 +44,8 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("Choose a format:", reply_markup=reply_markup)
 
+# File conversion handler
 async def convert_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handles file conversion when a button is clicked."""
     query = update.callback_query
     await query.answer()
 
@@ -68,13 +68,13 @@ async def convert_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
         img.save(output_path, "PNG")
 
     with open(output_path, "rb") as file:
-        await context.bot.send_document(chat_id=CHAT_ID or update.effective_chat.id, document=file)  # Sends file back to the chat
+        await context.bot.send_document(chat_id=CHAT_ID or update.effective_chat.id, document=file)
 
     os.remove(webp_path)
     os.remove(output_path)
 
+# Main function
 async def main():
-    """Main function to set up the bot."""
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
@@ -83,12 +83,17 @@ async def main():
     print("Bot is running...")
     await app.run_polling()
 
-# Properly handle asyncio event loop conflicts
+# Fix for Railway (Handles "event loop is already running" error)
 if __name__ == "__main__":
+    import asyncio
     try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        import nest_asyncio
+        nest_asyncio.apply()  # Allows nested event loops
+    except ImportError:
+        pass
 
-    loop.run_until_complete(main())  # Uses the correct event loop
+    loop = asyncio.get_event_loop()
+    if loop.is_running():
+        loop.create_task(main())  # Run main() as a task if loop is already running
+    else:
+        loop.run_until_complete(main())
