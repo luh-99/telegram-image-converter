@@ -20,68 +20,60 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Handle document uploads
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Ensure the message contains a document (and may ignore non-documents in groups)
-    if update.message.chat.type in ["group", "supergroup"] and not update.message.document:
+    if not update.message.document:
         return
 
     file = update.message.document
-    # Check if the mime type is correct for webp files
-    if file.mime_type != "image/webp":
-        await update.message.reply_text("Please send a valid .webp file.")
-        return
+    file_id = file.file_id
+    webp_path = f"downloads/{file_id}.webp"
 
-    file_path = await file.get_file()
-    os.makedirs("downloads", exist_ok=True)
-    webp_file = f"downloads/{file.file_id}.webp"
-    await file_path.download_to_drive(webp_file)
+    await file.get_file().download(webp_path)
 
-    keyboard = [[
-        InlineKeyboardButton("PNG", callback_data=f"convert_{file.file_id}_png"),
-        InlineKeyboardButton("JPEG", callback_data=f"convert_{file.file_id}_jpeg"),
-    ], [
-        InlineKeyboardButton("GIF", callback_data=f"convert_{file.file_id}_gif"),
-        InlineKeyboardButton("SVG", callback_data=f"convert_{file.file_id}_svg"),
-    ]]
+    # Create inline keyboard for format selection
+    keyboard = [
+        [InlineKeyboardButton("Convert to GIF", callback_data=f"convert_gif_{file_id}")],
+        [InlineKeyboardButton("Convert to PNG", callback_data=f"convert_png_{file_id}")]
+    ]
+    
     reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text("Please choose the format you want to convert to:", reply_markup=reply_markup)
 
-    await update.message.reply_text("Choose a format:", reply_markup=reply_markup)
-
-# File conversion handler
+# Handle callback for format selection
 async def convert_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    await query.answer()  # Acknowledge the callback
 
-    await query.message.reply_text("⏳ Please wait...")
-    await asyncio.sleep(5)  # Simulating a conversion delay
+    data = query.data.split("_")
+    format = data[1]  # 'gif' or 'png'
+    file_id = data[2]
 
-    _, file_id, format = query.data.split("_")
     webp_path = f"downloads/{file_id}.webp"
-    output_path = f"downloads/{file_id}.{format}"
+    output_path = None
 
     try:
-        if format in ["png", "jpeg"]:
-            img = Image.open(webp_path).convert("RGBA")
-            img.save(output_path, format.upper())
-        elif format == "gif":
+        if format == "gif":
+            output_path = f"downloads/{file_id}.gif"
             img = Image.open(webp_path)
             img.save(output_path, "GIF")
-        elif format == "svg":
-            output_path = f"downloads/{file_id}.png"  # Saving as PNG instead
+        elif format == "png":
+            output_path = f"downloads/{file_id}.png"
             img = Image.open(webp_path)
             img.save(output_path, "PNG")
 
         with open(output_path, "rb") as file:
             await context.bot.send_document(chat_id=CHAT_ID or update.effective_chat.id, document=file)
+            await query.message.reply_text("Conversion successful! The file has been sent.")
 
     except Exception as e:
         logging.error(f"Error during file conversion: {e}")
-        await query.message.reply_text("An error occurred during conversion.")
+        await query.message.reply_text("An error occurred during conversion. Please try again.")
 
     finally:
         # Clean up files
         if os.path.exists(webp_path):
             os.remove(webp_path)
-        if os.path.exists(output_path):
+        if output_path and os.path.exists(output_path):
             os.remove(output_path)
 
 # Main function
