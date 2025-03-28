@@ -20,8 +20,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Handle document uploads
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Ensure the message contains a document (and may ignore non-documents in groups)
-    if update.message.chat.type in ["group", "supergroup"] and not update.message.document:
+    # Ensure the message contains a document
+    if not update.message.document:
         return
 
     file = update.message.document
@@ -66,16 +66,15 @@ async def convert_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
             img = Image.open(webp_path)
             img.save(output_path, "GIF")
         elif format == "svg":
-            output_path = f"downloads/{file_id}.png"  # Saving as PNG instead
             img = Image.open(webp_path)
-            img.save(output_path, "PNG")
+            img.save(output_path, "PNG")  # Saving as PNG since Pillow does not support SVG directly
 
         with open(output_path, "rb") as file:
             await context.bot.send_document(chat_id=CHAT_ID or update.effective_chat.id, document=file)
 
     except Exception as e:
         logging.error(f"Error during file conversion: {e}")
-        await query.message.reply_text("An error occurred during conversion.")
+        await query.message.reply_text("An error occurred during conversion. Please try again.")
 
     finally:
         # Clean up files
