@@ -95,4 +95,8 @@ async def main():
     await app.run_polling()
 
 # Fix for Railway (Handles "event loop is already running" error)
-if name == "main"
+if name == "main":
+    import nest_asyncio
+    nest_asyncio.apply()  # Allows nested event loops
+
+    asyncio.run(main())
