@@ -1,4 +1,3 @@
-python-telegram-bot
-Pillow
-python-dotenv
-nest-asyncio
+python-telegram-bot==20.3
+Pillow==9.4.0
+python-dotenv==1.0.0
